@@ -10,6 +10,14 @@
   --color-muted: 100 116 139;
   --color-border: 226 232 240;
   --color-accent: 37 99 235;
+  
+  /* Additional CSS variables for Vue components */
+  --bg-primary: rgb(241 245 249);
+  --bg-secondary: rgb(255 255 255);
+  --bg-tertiary: rgb(248 250 252);
+  --text-primary: rgb(15 23 42);
+  --text-secondary: rgb(100 116 139);
+  --border-color: rgb(226 232 240);
 }
 
 .dark {
@@ -20,6 +28,14 @@
   --color-muted: 148 163 184;
   --color-border: 51 65 85;
   --color-accent: 96 165 250;
+  
+  /* Additional CSS variables for Vue components */
+  --bg-primary: rgb(15 23 42);
+  --bg-secondary: rgb(30 41 59);
+  --bg-tertiary: rgb(51 65 85);
+  --text-primary: rgb(226 232 240);
+  --text-secondary: rgb(148 163 184);
+  --border-color: rgb(51 65 85);
 }
 
 body {
