@@ -2,9 +2,14 @@
   <div class="layout">
     <header class="layout-header">
       <h1>MVU Generator</h1>
-      <button @click="toggleTheme" class="theme-toggle">
-        {{ isDark ? '☀️' : '🌙' }}
-      </button>
+      <div class="header-controls">
+        <button @click="openChatSheet" class="chat-button" title="Open Chat">
+          💬
+        </button>
+        <button @click="toggleTheme" class="theme-toggle">
+          {{ isDark ? '☀️' : '🌙' }}
+        </button>
+      </div>
     </header>
     
     <main class="layout-main">
@@ -32,19 +37,28 @@
         </div>
       </div>
     </main>
+
+    <ChatSheet />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useAppStore } from '@/stores/app'
+import { useUI } from '@@/composables'
 import MonacoEditor from './MonacoEditor.vue'
+import ChatSheet from './ChatSheet.vue'
 
 const appStore = useAppStore()
+const ui = useUI()
 const isDark = computed(() => appStore.isDark)
 
 const toggleTheme = () => {
   appStore.toggleTheme()
+}
+
+const openChatSheet = () => {
+  ui.openChatSheet()
 }
 
 onMounted(() => {
@@ -77,6 +91,13 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.header-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chat-button,
 .theme-toggle {
   background: none;
   border: none;
@@ -87,6 +108,7 @@ onMounted(() => {
   transition: background-color 0.2s;
 }
 
+.chat-button:hover,
 .theme-toggle:hover {
   background: var(--bg-tertiary);
 }
