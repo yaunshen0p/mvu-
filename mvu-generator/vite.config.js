@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
 import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 
 const resolvedMonacoPlugin =
@@ -17,4 +18,9 @@ export default defineConfig({
       customWorkers: [{ label: 'yaml', entry: 'monaco-yaml/yaml.worker' }],
     }),
   ],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
 })
