@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
 import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 
 const resolvedMonacoPlugin =
@@ -11,10 +12,15 @@ if (typeof resolvedMonacoPlugin !== 'function') {
 
 export default defineConfig({
   plugins: [
-    react(),
+    vue(),
     resolvedMonacoPlugin({
       languageWorkers: ['editorWorkerService', 'json', 'html', 'css', 'typescript'],
       customWorkers: [{ label: 'yaml', entry: 'monaco-yaml/yaml.worker' }],
     }),
   ],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
 })
