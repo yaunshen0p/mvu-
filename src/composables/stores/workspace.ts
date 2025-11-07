@@ -351,6 +351,45 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     };
   }
 
+  function buildExportPayload(metadata?: { templateName?: string; source?: string; messageId?: string }): Record<string, any> {
+    const timestamp = new Date().toISOString();
+    return {
+      exportedAt: timestamp,
+      workspace: {
+        source: metadata?.source || 'manual',
+        templateName: metadata?.templateName || null,
+        messageId: metadata?.messageId || null,
+      },
+      artifacts: generateExports(),
+    };
+  }
+
+  function exportAsJson(metadata?: { templateName?: string; source?: string; messageId?: string }): Record<string, any> {
+    const payload = buildExportPayload(metadata);
+    
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return payload;
+    }
+
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const safeName = (metadata?.templateName || 'mvu-workspace')
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'mvu-workspace';
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeName}-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    return payload;
+  }
+
   function getState(): WorkspaceState {
     return {
       artifacts: cloneArtifacts(artifacts.value),
@@ -391,6 +430,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     renameTemplate,
     persistTemplates,
     generateExports,
+    buildExportPayload,
+    exportAsJson,
     getState,
   };
 });

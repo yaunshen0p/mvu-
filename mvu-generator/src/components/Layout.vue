@@ -2,9 +2,14 @@
   <div class="layout">
     <header class="layout-header">
       <h1>MVU Generator</h1>
-      <button @click="toggleTheme" class="theme-toggle">
-        {{ isDark ? '☀️' : '🌙' }}
-      </button>
+      <div class="header-actions">
+        <button @click="openResultSheet" class="action-button" title="View Results">
+          查看结果
+        </button>
+        <button @click="toggleTheme" class="theme-toggle">
+          {{ isDark ? '☀️' : '🌙' }}
+        </button>
+      </div>
     </header>
     
     <main class="layout-main">
@@ -32,6 +37,14 @@
         </div>
       </div>
     </main>
+
+    <ResultSheet 
+      :isOpen="resultSheetOpen"
+      :exportPayload="resultSheetPayload"
+      :keyboardInset="keyboardInset"
+      @close="closeResultSheet"
+      @exportAll="handleExportAll"
+    />
   </div>
 </template>
 
@@ -39,12 +52,31 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import MonacoEditor from './MonacoEditor.vue'
+import ResultSheet from './ResultSheet.vue'
+import { useResultSheet } from '@@/composables/useResultSheet'
 
 const appStore = useAppStore()
+const resultSheet = useResultSheet()
+
 const isDark = computed(() => appStore.isDark)
+const resultSheetOpen = computed(() => resultSheet.isOpen.value)
+const resultSheetPayload = computed(() => resultSheet.exportPayload.value)
+const keyboardInset = ref(0)
 
 const toggleTheme = () => {
   appStore.toggleTheme()
+}
+
+const openResultSheet = () => {
+  resultSheet.open()
+}
+
+const closeResultSheet = () => {
+  resultSheet.close()
+}
+
+const handleExportAll = () => {
+  resultSheet.handleExportAll()
 }
 
 onMounted(() => {
@@ -75,6 +107,29 @@ onMounted(() => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.action-button {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .theme-toggle {
