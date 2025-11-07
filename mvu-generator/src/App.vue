@@ -7,9 +7,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAppStore } from './stores/app'
+import { useWorkspace } from './composables/useWorkspace'
 import Layout from './components/Layout.vue'
 
 const appStore = useAppStore()
+const workspace = useWorkspace()
 
 onMounted(() => {
   // Initialize theme from localStorage or system preference
@@ -19,6 +21,9 @@ onMounted(() => {
   } else {
     appStore.setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   }
+  
+  // Initialize workspace
+  workspace.loadTemplates()
 })
 </script>
 
