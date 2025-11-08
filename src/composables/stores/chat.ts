@@ -8,19 +8,33 @@ import { ref, computed } from 'vue';
 import { useStorageNamespace } from '../utils/storage';
 import { createChatCompletion } from '../../services/openai';
 import { useSettingsStore } from './settings';
+import { useWorkspaceStore } from './workspace';
+import { assemblePrompt, type ContextSelection, type VariableSummary } from '../../utils/prompts';
+import { translateErrorMessage } from '../../utils/errors';
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
+  pending?: boolean;
+  status?: 'pending' | 'complete' | 'cancelled' | 'error';
+  error?: string | null;
 }
 
 export interface ChatState {
   messages: ChatMessage[];
   isLoading: boolean;
+  isStreaming: boolean;
   abortSignal: AbortSignal | null;
   error: string | null;
+}
+
+export interface SendMessageOptions {
+  userInput?: string;
+  context?: ContextSelection;
+  variableSummary?: VariableSummary;
+  history?: ChatMessage[];
 }
 
 const STORAGE_NAMESPACE = 'mvuChat';
@@ -41,10 +55,12 @@ function normaliseChatMessage(message: any): ChatMessage | null {
 export const useChatStore = defineStore('chat', () => {
   const storage = useStorageNamespace(STORAGE_NAMESPACE);
   const settingsStore = useSettingsStore();
+  const workspaceStore = useWorkspaceStore();
 
   // State
   const messages = ref<ChatMessage[]>([]);
   const isLoading = ref(false);
+  const isStreaming = ref(false);
   const currentAbortController = ref<AbortController | null>(null);
   const error = ref<string | null>(null);
 
@@ -106,19 +122,73 @@ export const useChatStore = defineStore('chat', () => {
     storage.write(CHAT_HISTORY_KEY, sanitised);
   }
 
-  async function sendMessage(userMessage: string, contextData?: Record<string, any>) {
-    if (!userMessage.trim()) {
-      throw new Error('Message cannot be empty');
+  async function sendMessage(userMessage: string, options?: SendMessageOptions) {
+    const userInput = options?.userInput || userMessage;
+    
+    if (!userInput.trim()) {
+      const errorMsg = '请输入要发送的内容。';
+      error.value = errorMsg;
+      throw new Error(errorMsg);
     }
 
-    // Add user message to history
+    // Check API credentials
+    const settings = settingsStore.getState();
+    if (!settings.apiKey) {
+      const errorMsg = '请先配置 API 凭据。';
+      error.value = errorMsg;
+      throw new Error(errorMsg);
+    }
+
+    // Prevent duplicate requests
+    if (isLoading.value) {
+      return;
+    }
+
+    // Assemble the prompt
+    let assembled;
+    try {
+      const historyForPrompt = options?.history || messages.value;
+      assembled = assemblePrompt({
+        userInput: userInput.trim(),
+        history: historyForPrompt.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        variableSummary: options?.variableSummary || {},
+        context: options?.context || {},
+      });
+    } catch (assemblyError: any) {
+      const errorMsg = translateErrorMessage(assemblyError?.message) || '无法构建提示。';
+      error.value = errorMsg;
+      throw new Error(errorMsg);
+    }
+
+    const timestamp = new Date().toISOString();
+    
+    // Add user message
+    const userId = `user-${Date.now().toString(36)}`;
+    const assistantId = `assistant-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 8)}`;
+
     const userMsg = addMessage({
+      id: userId,
       role: 'user',
-      content: userMessage.trim(),
+      content: userInput.trim(),
+      timestamp,
+    });
+
+    // Add placeholder assistant message
+    const assistantMsg = addMessage({
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp,
+      pending: true,
+      status: 'pending',
     });
 
     // Set loading state
     isLoading.value = true;
+    isStreaming.value = true;
     error.value = null;
 
     // Create abort controller for this request
@@ -126,55 +196,94 @@ export const useChatStore = defineStore('chat', () => {
     currentAbortController.value = abortController;
 
     try {
-      const settings = settingsStore.getState();
-
-      if (!settings.apiKey) {
-        throw new Error('API key is not configured');
-      }
-
-      // Build the messages array with context
-      const messagesToSend: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = messages.value.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      // Call OpenAI API
-      const { payload } = await createChatCompletion({
+      // Call OpenAI API with streaming
+      const result = await createChatCompletion({
         apiKey: settings.apiKey,
         providerType: settings.providerType,
         baseUrl: settings.baseUrl,
         model: settings.defaultModel,
-        messages: messagesToSend,
+        messages: assembled.messages,
         headers: settings.headers,
+        stream: true,
         signal: abortController.signal,
+        onToken: (delta: string, fullText: string) => {
+          // Update assistant message in real-time
+          updateMessage(assistantId, {
+            content: fullText,
+            pending: true,
+            status: 'pending',
+          });
+        },
+        onComplete: (finalContent: string) => {
+          // Mark message as complete
+          updateMessage(assistantId, {
+            content: finalContent,
+            pending: false,
+            status: 'complete',
+            error: null,
+          });
+
+          // Extract and update workspace artifacts
+          if (finalContent) {
+            workspaceStore.extractArtifacts(finalContent);
+            workspaceStore.setBaseline(workspaceStore.artifacts);
+          }
+
+          isStreaming.value = false;
+        },
+        onError: () => {
+          isStreaming.value = false;
+        },
       });
 
-      const assistantContent = payload?.choices?.[0]?.message?.content;
+      const finalContent = result?.payload?.choices?.[0]?.message?.content ?? '';
 
-      if (!assistantContent) {
-        throw new Error('No response received from API');
+      // Ensure the message is marked as complete (in case streaming didn't call onComplete)
+      if (finalContent) {
+        updateMessage(assistantId, {
+          content: finalContent,
+          pending: false,
+          status: 'complete',
+          error: null,
+        });
+
+        // Extract and update workspace artifacts
+        workspaceStore.extractArtifacts(finalContent);
+        workspaceStore.setBaseline(workspaceStore.artifacts);
       }
-
-      // Add assistant message to history
-      const assistantMsg = addMessage({
-        role: 'assistant',
-        content: assistantContent,
-      });
 
       return {
         userMessage: userMsg,
-        assistantMessage: assistantMsg,
+        assistantMessage: messages.value.find((msg) => msg.id === assistantId) || assistantMsg,
       };
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        error.value = 'Request was cancelled';
-      } else {
-        error.value = err?.message || 'Failed to send message';
+      const isAbort = err?.name === 'AbortError';
+      
+      if (!isAbort) {
+        console.error('[chat] Send message error:', err);
       }
-      console.error('[chat] Send message error:', err);
+
+      const localizedError = translateErrorMessage(err?.message);
+      const errorMessage = isAbort
+        ? '请求已取消。'
+        : localizedError || '请求失败，请稍后重试。';
+
+      error.value = errorMessage;
+
+      // Update assistant message with error
+      updateMessage(assistantId, {
+        content: isAbort
+          ? '🚫 请求已取消。'
+          : `⚠️ 错误：${errorMessage}`,
+        pending: false,
+        status: isAbort ? 'cancelled' : 'error',
+        error: isAbort ? null : errorMessage,
+      });
+
       throw err;
     } finally {
       isLoading.value = false;
+      isStreaming.value = false;
       currentAbortController.value = null;
     }
   }
@@ -189,6 +298,7 @@ export const useChatStore = defineStore('chat', () => {
       currentAbortController.value.abort();
       currentAbortController.value = null;
       isLoading.value = false;
+      isStreaming.value = false;
     }
   }
 
@@ -196,6 +306,7 @@ export const useChatStore = defineStore('chat', () => {
     return {
       messages: messages.value,
       isLoading: isLoading.value,
+      isStreaming: isStreaming.value,
       abortSignal: currentAbortController.value?.signal || null,
       error: error.value,
     };
@@ -205,6 +316,7 @@ export const useChatStore = defineStore('chat', () => {
     // State
     messages,
     isLoading,
+    isStreaming,
     error,
 
     // Computed
