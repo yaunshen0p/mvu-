@@ -1,73 +1,25 @@
 <template>
-  <div class="layout">
-    <header class="layout-header">
-      <h1>MVU Generator</h1>
-      <button @click="toggleTheme" class="theme-toggle">
-        {{ isDark ? '☀️' : '🌙' }}
-      </button>
-    </header>
-    
-    <main class="layout-main">
-      <WorkspaceTabs />
-    </main>
-  </div>
+  <AppLayout />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useAppStore } from '../stores/app'
-import WorkspaceTabs from './WorkspaceTabs.vue'
+import { onMounted } from 'vue'
+import { useUI } from '../../../src/composables/useUI'
+import AppLayout from './layout/AppLayout.vue'
 
-const appStore = useAppStore()
-const isDark = computed(() => appStore.isDark)
+const { initializeTheme } = useUI()
 
-const toggleTheme = () => {
-  appStore.toggleTheme()
+const openChatSheet = () => {
+  ui.openChatSheet()
 }
+
+onMounted(() => {
+  // Initialize theme and UI state
+  initializeTheme()
+  console.log('AppLayout with navigation shell mounted successfully')
+})
 </script>
 
 <style scoped>
-.layout {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.layout-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.layout-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.theme-toggle {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s;
-}
-
-.theme-toggle:hover {
-  background: var(--bg-tertiary);
-}
-
-.layout-main {
-  flex: 1;
-  overflow: hidden;
-  padding: 0;
-}
+/* Layout component is now just a wrapper for AppLayout */
 </style>
