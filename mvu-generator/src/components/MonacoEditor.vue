@@ -167,6 +167,14 @@ onUnmounted(() => {
     resizeObserver = null
   }
 })
+
+// Watch for theme changes and update editor theme
+watch(currentTheme, (newTheme) => {
+  console.log('Monaco Editor theme changed to:', newTheme)
+  // When Monaco Editor is integrated, theme switch will be:
+  // const newEditorTheme = newTheme === 'dark' ? 'vs-dark' : 'vs-light'
+  // editor.setTheme(newEditorTheme)
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -240,5 +248,16 @@ onUnmounted(() => {
 
 :deep(.monaco-editor .monaco-editor-background) {
   background-color: var(--bg-primary);
+}
+
+.theme-status {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.875rem;
+}
+
+.theme-status strong {
+  color: var(--text-primary);
 }
 </style>
