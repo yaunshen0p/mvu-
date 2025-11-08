@@ -5,7 +5,6 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { useStorageNamespace } from '../utils/storage';
 import {
   normaliseArtifacts,
   mergeArtifacts,
@@ -13,7 +12,7 @@ import {
   extractArtifactsFromContent,
   EMPTY_ARTIFACTS,
   WORKSPACE_TABS,
-} from '../../utils/workspace';
+} from '../utils/workspace';
 
 export interface CodeTemplate {
   name: string;
@@ -44,6 +43,23 @@ const CODE_TEMPLATES_KEY = 'codeTemplates';
 
 function cloneArtifacts(artifacts: Record<string, string> = {}) {
   return { ...normaliseArtifacts(artifacts) };
+}
+
+function readJSON(key: string, defaultValue: any = null): any {
+  try {
+    const item = localStorage.getItem(`${STORAGE_NAMESPACE}:${key}`);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function writeJSON(key: string, value: any): void {
+  try {
+    localStorage.setItem(`${STORAGE_NAMESPACE}:${key}`, JSON.stringify(value));
+  } catch {
+    // Silent fail for localStorage errors
+  }
 }
 
 function sanitiseTemplateEntry(entry: any): CodeTemplate | null {
@@ -92,17 +108,22 @@ function sortTemplates(templates: CodeTemplate[] = []): CodeTemplate[] {
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
-  const storage = useStorageNamespace(STORAGE_NAMESPACE);
-
   // State
-  const artifacts = ref<Record<string, string>>(cloneArtifacts());
+  const artifacts = ref<Record<string, string>>(cloneArtifacts({
+    html: '<!DOCTYPE html>\n<html>\n<head>\n  <title>Sample Page</title>\n</head>\n<body>\n  <h1>Hello World!</h1>\n  <p>This is a sample HTML page.</p>\n</body>\n</html>',
+    css: 'body {\n  font-family: Arial, sans-serif;\n  margin: 20px;\n  background-color: #f5f5f5;\n}\n\nh1 {\n  color: #333;\n  text-align: center;\n}',
+    javascript: 'console.log("Hello from JavaScript!");\n\ndocument.addEventListener("DOMContentLoaded", function() {\n  console.log("Page loaded");\n});',
+    yaml: '# Sample YAML Configuration\napp:\n  name: "My App"\n  version: "1.0.0"\n  environment: "development"',
+    script: '# MVU Script Example\n\nfunction main() {\n  console.log("MVU Script executed");\n}\n\nmain();',
+    regex: '# Sample Regex Patterns\nemail: \\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b\nphone: \\b\\d{3}-\\d{3}-\\d{4}\\b'
+  }));
   const baseline = ref<Record<string, string>>(cloneArtifacts());
   const activeTab = ref<string>('html');
   const templates = ref<CodeTemplate[]>([]);
 
   // Load persisted templates
   function loadTemplates() {
-    const stored = storage.read<any[]>(CODE_TEMPLATES_KEY, []);
+    const stored = readJSON<any[]>(CODE_TEMPLATES_KEY, []);
     if (!Array.isArray(stored)) {
       templates.value = [];
       return;
@@ -337,7 +358,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       return base;
     });
 
-    storage.write(CODE_TEMPLATES_KEY, payload);
+    writeJSON(CODE_TEMPLATES_KEY, payload);
   }
 
   function generateExports(): ExportPayload {
@@ -349,45 +370,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       script: artifacts.value.script,
       regex: artifacts.value.regex,
     };
-  }
-
-  function buildExportPayload(metadata?: { templateName?: string; source?: string; messageId?: string }): Record<string, any> {
-    const timestamp = new Date().toISOString();
-    return {
-      exportedAt: timestamp,
-      workspace: {
-        source: metadata?.source || 'manual',
-        templateName: metadata?.templateName || null,
-        messageId: metadata?.messageId || null,
-      },
-      artifacts: generateExports(),
-    };
-  }
-
-  function exportAsJson(metadata?: { templateName?: string; source?: string; messageId?: string }): Record<string, any> {
-    const payload = buildExportPayload(metadata);
-    
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return payload;
-    }
-
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const safeName = (metadata?.templateName || 'mvu-workspace')
-      .toString()
-      .toLowerCase()
-      .replace(/[^a-z0-9-_]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'mvu-workspace';
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${safeName}-${Date.now()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    return payload;
   }
 
   function getState(): WorkspaceState {
@@ -430,8 +412,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     renameTemplate,
     persistTemplates,
     generateExports,
-    buildExportPayload,
-    exportAsJson,
     getState,
   };
 });
