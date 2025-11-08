@@ -1,4 +1,4 @@
-# 多阶段构建 Dockerfile - 用于部署 ranbo-play React/Vite SPA 应用
+# 多阶段构建 Dockerfile - 用于部署 ranbo-play Vue 3 + Vite SPA 应用
 # Stage 1: 构建阶段 - 使用 Node.js 构建前端应用
 FROM node:20-alpine AS builder
 
@@ -59,10 +59,10 @@ RUN mkdir -p /var/cache/nginx/client_temp \
 
 # 添加容器元数据标签
 LABEL org.opencontainers.title="ranbo-play" \
-      org.opencontainers.description="MVU 状态栏生成器 - React/Vite SPA 应用" \
+      org.opencontainers.description="MVU 状态栏生成器 - Vue 3 + Vite SPA 应用" \
       org.opencontainers.version=${VERSION} \
       org.opencontainers.created=${BUILD_TIMESTAMP} \
-      org.opencontainers.source="https://github.com/your-org/ranbo-play"
+      org.opencontainers.source="https://github.com/ranbo12138/ranbo-play"
 
 # 暴露 80 端口
 EXPOSE 80

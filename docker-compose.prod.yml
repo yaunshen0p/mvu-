@@ -1,0 +1,108 @@
+version: '3.8'
+
+# 生产环境 Docker Compose 配置
+# 使用方法：
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
+#   docker compose -f docker-compose.prod.yml down
+
+services:
+  ranbo-play:
+    # 使用已发布的镜像
+    image: ghcr.io/ranbo12138/ranbo-play:latest
+    
+    # 容器名称
+    container_name: ranbo-play-prod
+    
+    # 自动重启策略
+    restart: unless-stopped
+    
+    # 端口映射
+    ports:
+      # HTTP
+      - "0.0.0.0:80:80"
+      # HTTPS（如需要）
+      # - "0.0.0.0:443:443"
+    
+    # 环境变量
+    environment:
+      - TZ=UTC
+      # 可以添加更多环境变量
+    
+    # 健康检查
+    healthcheck:
+      # 检查脚本
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      # 检查间隔（秒）
+      interval: 30s
+      # 超时时间（秒）
+      timeout: 10s
+      # 失败重试次数
+      retries: 3
+      # 容器启动等待时间（秒）
+      start_period: 40s
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=ranbo-play"
+    
+    # 卷挂载（可选）
+    # volumes:
+    #   # 挂载自定义 nginx 配置
+    #   - ./nginx-prod.conf:/etc/nginx/conf.d/default.conf:ro
+    #   # 挂载 SSL 证书
+    #   - ./ssl:/etc/nginx/ssl:ro
+    
+    # 网络
+    networks:
+      - ranbo-network
+    
+    # 标签
+    labels:
+      - "com.example.description=ranbo-play MVU Generator"
+      - "com.example.environment=production"
+      - "com.example.version=1.0.0"
+
+# 自定义网络
+networks:
+  ranbo-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-ranbo
+
+# 可选：使用 nginx reverse proxy
+# services:
+#   nginx-proxy:
+#     image: nginx:alpine
+#     container_name: ranbo-play-nginx-proxy
+#     restart: unless-stopped
+#     ports:
+#       - "0.0.0.0:80:80"
+#       - "0.0.0.0:443:443"
+#     volumes:
+#       - ./nginx-reverse-proxy.conf:/etc/nginx/nginx.conf:ro
+#       - ./ssl:/etc/nginx/ssl:ro
+#     networks:
+#       - ranbo-network
+#     depends_on:
+#       - ranbo-play
+#     healthcheck:
+#       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 10s
