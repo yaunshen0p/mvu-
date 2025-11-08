@@ -1,31 +1,37 @@
 <template>
   <div class="layout">
-    <header class="layout-header">
+    <header class="layout-header" role="banner">
       <h1>MVU Generator</h1>
-      <button @click="toggleTheme" class="theme-toggle">
+      <button 
+        @click="toggleTheme" 
+        class="theme-toggle"
+        :aria-label="`Switch to ${isDark ? 'light' : 'dark'} theme`"
+        :aria-pressed="isDark"
+        title="Toggle light/dark theme"
+      >
         {{ isDark ? '☀️' : '🌙' }}
       </button>
     </header>
     
-    <main class="layout-main">
+    <main class="layout-main" role="main">
       <div class="placeholder-content">
         <h2>Vue 3 + Vite Scaffold</h2>
         <p>This is a placeholder layout component.</p>
-        <p>Current theme: {{ isDark ? 'Dark' : 'Light' }}</p>
+        <p>Current theme: <strong>{{ isDark ? 'Dark' : 'Light' }}</strong></p>
         <div class="feature-grid">
-          <div class="feature-card">
+          <div class="feature-card" role="article">
             <h3>Monaco Editor</h3>
             <MonacoEditor />
           </div>
-          <div class="feature-card">
+          <div class="feature-card" role="article">
             <h3>Chat Interface</h3>
             <p>Ready for integration</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" role="article">
             <h3>Code Workspace</h3>
             <p>Ready for integration</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" role="article">
             <h3>Variable Editor</h3>
             <p>Ready for integration</p>
           </div>
@@ -85,10 +91,24 @@ onMounted(() => {
   padding: 0.5rem;
   border-radius: 0.5rem;
   transition: background-color 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .theme-toggle:hover {
   background: var(--bg-tertiary);
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
 }
 
 .layout-main {
