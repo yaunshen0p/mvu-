@@ -12,7 +12,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: 'happy-dom',
+    root: path.resolve(__dirname, '..'),
+    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
