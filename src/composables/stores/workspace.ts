@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useStorageNamespace } from '../utils/storage';
 import {
   normaliseArtifacts,
@@ -13,7 +13,7 @@ import {
   extractArtifactsFromContent,
   EMPTY_ARTIFACTS,
   WORKSPACE_TABS,
-} from '../../utils/workspace';
+} from '../../utils/workspace.ts';
 
 export interface CodeTemplate {
   name: string;
@@ -91,6 +91,17 @@ function sortTemplates(templates: CodeTemplate[] = []): CodeTemplate[] {
   });
 }
 
+function generateInitialExports(): ExportPayload {
+  return {
+    html: '',
+    css: '',
+    javascript: '',
+    yaml: '',
+    script: '',
+    regex: '',
+  };
+}
+
 export const useWorkspaceStore = defineStore('workspace', () => {
   const storage = useStorageNamespace(STORAGE_NAMESPACE);
 
@@ -99,6 +110,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const baseline = ref<Record<string, string>>(cloneArtifacts());
   const activeTab = ref<string>('html');
   const templates = ref<CodeTemplate[]>([]);
+  const currentExports = ref<ExportPayload>(generateInitialExports());
 
   // Load persisted templates
   function loadTemplates() {
@@ -341,7 +353,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   function generateExports(): ExportPayload {
-    return {
+    const exports = {
       html: artifacts.value.html,
       css: artifacts.value.css,
       javascript: artifacts.value.javascript,
@@ -349,7 +361,24 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       script: artifacts.value.script,
       regex: artifacts.value.regex,
     };
+    currentExports.value = exports;
+    return exports;
   }
+
+  // Watch for artifact changes and regenerate exports with debounce
+  let exportDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  watch(
+    () => artifacts.value,
+    () => {
+      if (exportDebounceTimer) {
+        clearTimeout(exportDebounceTimer);
+      }
+      exportDebounceTimer = setTimeout(() => {
+        generateExports();
+      }, 300);
+    },
+    { deep: true }
+  );
 
   function getState(): WorkspaceState {
     return {
@@ -369,6 +398,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     baseline,
     activeTab,
     templates,
+    currentExports,
 
     // Computed
     currentArtifact,
