@@ -13,6 +13,18 @@ const openChatSheet = () => {
   ui.openChatSheet()
 }
 
+const openResultSheet = () => {
+  resultSheet.open()
+}
+
+const closeResultSheet = () => {
+  resultSheet.close()
+}
+
+const handleExportAll = () => {
+  resultSheet.handleExportAll()
+}
+
 onMounted(() => {
   // Initialize theme and UI state
   initializeTheme()
