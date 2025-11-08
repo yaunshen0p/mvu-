@@ -1,12 +1,15 @@
 import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@@': resolve(__dirname, '../src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'happy-dom',
@@ -19,7 +22,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../src'),
+      '@': resolve(__dirname, 'src'),
+      '@shared': resolve(__dirname, '../src'),
+      pinia: resolve(__dirname, 'node_modules/pinia'),
+      vue: resolve(__dirname, 'node_modules/vue'),
     },
   },
 });
