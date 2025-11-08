@@ -9,6 +9,10 @@ import AppLayout from './layout/AppLayout.vue'
 
 const { initializeTheme } = useUI()
 
+const openChatSheet = () => {
+  ui.openChatSheet()
+}
+
 onMounted(() => {
   // Initialize theme and UI state
   initializeTheme()
