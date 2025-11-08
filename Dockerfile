@@ -16,11 +16,21 @@ ENV PATH=/app/node_modules/.bin:$PATH
 # 利用 Docker 层缓存，只有当依赖变化时才重新安装
 COPY mvu-generator/package*.json ./
 
-# 安装项目依赖并清理缓存以减小镜像大小
-RUN npm ci && npm cache clean --force
+# 安装项目依赖
+# 使用 npm install 而不是 npm ci，因为 npm ci 在处理 peer dependencies 冲突时更严格
+# 添加 --legacy-peer-deps 标志以处理可能的依赖版本冲突（特别是 Monaco Editor 等大型库）
+# 分开缓存清理步骤以避免缓存问题影响安装过程
+RUN npm install --legacy-peer-deps
+
+# 清理 npm 缓存以减小镜像大小
+RUN npm cache clean --force
 
 # 复制源代码到容器中
+# 复制 mvu-generator 的源代码
 COPY mvu-generator/ ./
+
+# 复制共享的 src 目录（包含 composables/plugins 等共享组件）
+COPY src/ ../src/
 
 # 构建生产版本 - 生成 dist 目录
 RUN npm run build
