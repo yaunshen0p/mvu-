@@ -18,4 +18,12 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
     },
   },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@shared': resolve(__dirname, '../src'),
+      pinia: resolve(__dirname, 'node_modules/pinia'),
+      vue: resolve(__dirname, 'node_modules/vue'),
+    },
+  },
 });

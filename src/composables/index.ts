@@ -27,3 +27,13 @@ export type {
   ExportPayload,
   UIState,
 } from './stores';
+
+// Re-export utilities
+export {
+  validateHeaders,
+  normalizeHeadersDraft,
+  validateUrl,
+  validateApiKey,
+} from './utils/validation';
+
+export type { HeaderValidationResult } from './utils/validation';
