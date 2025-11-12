@@ -71,7 +71,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/ranbo12138/ranbo-play
+          images: ghcr.io/yaunshen0p/mvu-
           tags: |
             type=ref,event=pr
             type=ref,event=pr,suffix=-{{sha}}
